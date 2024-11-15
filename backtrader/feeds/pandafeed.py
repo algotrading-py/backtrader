@@ -18,17 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-from backtrader.utils.py3 import filter, string_types, integer_types
-
-from backtrader import date2num
 import backtrader.feed as feed
+from backtrader import date2num
+from backtrader.utils.py3 import filter, integer_types, string_types
 
 
 class PandasDirectData(feed.DataBase):
-    '''
+    """
     Uses a Pandas DataFrame as the feed source, iterating directly over the
     tuples returned by "itertuples".
 
@@ -42,21 +40,19 @@ class PandasDirectData(feed.DataBase):
       - A negative value in any of the parameters for the Data lines
         indicates it's not present in the DataFrame
         it is
-    '''
+    """
 
     params = (
-        ('datetime', 0),
-        ('open', 1),
-        ('high', 2),
-        ('low', 3),
-        ('close', 4),
-        ('volume', 5),
-        ('openinterest', 6),
+        ("datetime", 0),
+        ("open", 1),
+        ("high", 2),
+        ("low", 3),
+        ("close", 4),
+        ("volume", 5),
+        ("openinterest", 6),
     )
 
-    datafields = [
-        'datetime', 'open', 'high', 'low', 'close', 'volume', 'openinterest'
-    ]
+    datafields = ["datetime", "open", "high", "low", "close", "volume", "openinterest"]
 
     def start(self):
         super(PandasDirectData, self).start()
@@ -72,7 +68,7 @@ class PandasDirectData(feed.DataBase):
 
         # Set the standard datafields - except for datetime
         for datafield in self.getlinealiases():
-            if datafield == 'datetime':
+            if datafield == "datetime":
                 continue
 
             # get the column index
@@ -89,7 +85,7 @@ class PandasDirectData(feed.DataBase):
             line[0] = row[colidx]
 
         # datetime
-        colidx = getattr(self.params, 'datetime')
+        colidx = getattr(self.params, "datetime")
         tstamp = row[colidx]
 
         # convert to float via datetime and store it
@@ -97,7 +93,7 @@ class PandasDirectData(feed.DataBase):
         dtnum = date2num(dt)
 
         # get the line to be set
-        line = getattr(self.lines, 'datetime')
+        line = getattr(self.lines, "datetime")
         line[0] = dtnum
 
         # Done ... return
@@ -105,7 +101,33 @@ class PandasDirectData(feed.DataBase):
 
 
 class PandasData(feed.DataBase):
-    '''
+    """
+    Использует Pandas DataFrame как источник данных, используя индексы в именах столбцов
+    (которые могут быть "числовыми")
+
+    Это означает, что все параметры, связанные со строками, должны иметь числовые
+    значения в качестве индексов для кортежей
+
+    Параметры:
+
+     - ``nocase`` (по умолчанию *True*) поиск столбцов без учета регистра
+
+    Примечание:
+
+     - Параметр ``dataname`` это Pandas DataFrame
+
+     - Возможные значения для datetime:
+       - None: индекс содержит datetime
+       - -1: нет индекса, автоопределение столбца
+       - >= 0 или строка: конкретный идентификатор столбца
+
+     - Для других параметров строк:
+       - None: столбец отсутствует
+       - -1: автоопределение
+       - >= 0 или строка: конкретный идентификатор столбца
+    """
+
+    """
     Uses a Pandas DataFrame as the feed source, using indices into column
     names (which can be "numeric")
 
@@ -131,34 +153,30 @@ class PandasData(feed.DataBase):
         - None: column not present
         - -1: autodetect
         - >= 0 or string: specific colum identifier
-    '''
+    """
 
     params = (
-        ('nocase', True),
-
+        ("nocase", True),
         # Possible values for datetime (must always be present)
         #  None : datetime is the "index" in the Pandas Dataframe
         #  -1 : autodetect position or case-wise equal name
         #  >= 0 : numeric index to the colum in the pandas dataframe
         #  string : column name (as index) in the pandas dataframe
-        ('datetime', None),
-
+        ("datetime", None),
         # Possible values below:
         #  None : column not present
         #  -1 : autodetect position or case-wise equal name
         #  >= 0 : numeric index to the colum in the pandas dataframe
         #  string : column name (as index) in the pandas dataframe
-        ('open', -1),
-        ('high', -1),
-        ('low', -1),
-        ('close', -1),
-        ('volume', -1),
-        ('openinterest', -1),
+        ("open", -1),
+        ("high", -1),
+        ("low", -1),
+        ("close", -1),
+        ("volume", -1),
+        ("openinterest", -1),
     )
 
-    datafields = [
-        'datetime', 'open', 'high', 'low', 'close', 'volume', 'openinterest'
-    ]
+    datafields = ["datetime", "open", "high", "low", "close", "volume", "openinterest"]
 
     def __init__(self):
         super(PandasData, self).__init__()
@@ -240,7 +258,7 @@ class PandasData(feed.DataBase):
 
         # Set the standard datafields
         for datafield in self.getlinealiases():
-            if datafield == 'datetime':
+            if datafield == "datetime":
                 continue
 
             colindex = self._colmapping[datafield]
@@ -255,7 +273,7 @@ class PandasData(feed.DataBase):
             line[0] = self.p.dataname.iloc[self._idx, colindex]
 
         # datetime conversion
-        coldtime = self._colmapping['datetime']
+        coldtime = self._colmapping["datetime"]
 
         if coldtime is None:
             # standard index in the datetime
