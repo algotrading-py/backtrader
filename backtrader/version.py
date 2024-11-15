@@ -20,7 +20,7 @@
 ###############################################################################
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-__version__ = "1.9.78.123.24.01-ru"
+__version__ = "1.9.78.123+ru24.01"
 
 # Разделяем версию, игнорируя текстовые префиксы
 __btversion__ = tuple(
