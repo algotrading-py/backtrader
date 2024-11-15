@@ -27,6 +27,21 @@ from backtrader.utils.py3 import filter, integer_types, string_types
 
 class PandasDirectData(feed.DataBase):
     """
+    Использует Pandas DataFrame как источник данных, выполняя итерацию напрямую по
+    кортежам, возвращаемым "itertuples".
+
+    Это означает, что все параметры, связанные со строками, должны иметь числовые
+    значения в качестве индексов для кортежей
+
+    Примечание:
+
+     - Параметр ``dataname`` это Pandas DataFrame
+
+     - Отрицательное значение в любом из параметров для линий Data
+       указывает на то, что он отсутствует в DataFrame
+    """
+
+    """
     Uses a Pandas DataFrame as the feed source, iterating directly over the
     tuples returned by "itertuples".
 
