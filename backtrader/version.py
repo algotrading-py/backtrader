@@ -20,6 +20,6 @@
 ###############################################################################
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-__version__ = "1.9.78.123 - RU, начало 15.11.2024"
+__version__ = "1.9.78.123RU24.01"
 
 __btversion__ = tuple(int(x) for x in __version__.split("."))
