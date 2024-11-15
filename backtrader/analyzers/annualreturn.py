@@ -18,17 +18,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from collections import OrderedDict
 
-from backtrader.utils.py3 import range
 from backtrader import Analyzer
+from backtrader.utils.py3 import range
 
 
 class AnnualReturn(Analyzer):
-    '''
+    """
+    Этот анализатор вычисляет годовые доходности, анализируя начало и конец года
+
+    Параметры:
+    - (Отсутствуют)
+
+    Атрибуты:
+    - ``rets``: список вычисленных годовых доходностей
+    - ``ret``: словарь (ключ: год) годовых доходностей
+
+    **get_analysis**:
+    - Возвращает словарь годовых доходностей (ключ: год)
+    ---------------------------------------------------------------------
+
     This analyzer calculates the AnnualReturns by looking at the beginning
     and end of the year
 
@@ -45,10 +57,11 @@ class AnnualReturn(Analyzer):
     **get_analysis**:
 
       - Returns a dictionary of annual returns (key: year)
-    '''
+    """
 
     def stop(self):
         # Must have stats.broker
+        # Должен иметь статистику брокера
         cur_year = -1
 
         value_start = 0.0
@@ -69,18 +82,22 @@ class AnnualReturn(Analyzer):
                     self.ret[cur_year] = annualret
 
                     # changing between real years, use last value as new start
+                    # Переход между реальными годами, используем последнее значение как новое начало
                     value_start = value_end
                 else:
                     # No value set whatsoever, use the currently loaded value
+                    # Вообще не установлено никакого значения, используем текущее загруженное значение
                     value_start = value_cur
 
                 cur_year = dt.year
 
             # No matter what, the last value is always the last loaded value
+            # В любом случае, последнее значение всегда является последним загруженным значением
             value_end = value_cur
 
         if cur_year not in self.ret:
             # finish calculating pending data
+            # Завершаем вычисление отложенных (ожидающих) данных
             annualret = (value_end / value_start) - 1.0
             self.rets.append(annualret)
             self.ret[cur_year] = annualret
