@@ -18,24 +18,25 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import backtrader as bt
 
-__all__ = ['PercentSizer', 'AllInSizer', 'PercentSizerInt', 'AllInSizerInt']
+__all__ = ["PercentSizer", "AllInSizer", "PercentSizerInt", "AllInSizerInt"]
 
 
 class PercentSizer(bt.Sizer):
-    '''This sizer return percents of available cash
-
-    Params:
-      - ``percents`` (default: ``20``)
-    '''
+    """This sizer return percents of available cash
+      Этот сайзер возвращает процент от доступных денежных средств
+      Параметры:
+    - ``percents`` (по умолчанию: ``20``) - процент от доступных средств
+      Params:
+        - ``percents`` (default: ``20``)
+    """
 
     params = (
-        ('percents', 20),
-        ('retint', False),  # return an int size or rather the float value
+        ("percents", 20),
+        ("retint", False),  # return an int size or rather the float value
     )
 
     def __init__(self):
@@ -55,36 +56,42 @@ class PercentSizer(bt.Sizer):
 
 
 class AllInSizer(PercentSizer):
-    '''This sizer return all available cash of broker
+    """This sizer return all available cash of broker
+      Этот сайзер возвращает все доступные денежные средства брокера
+      Параметры:
+    - ``percents`` (по умолчанию: ``100``) - процент от доступных средств
+       Params:
+         - ``percents`` (default: ``100``)
+    """
 
-     Params:
-       - ``percents`` (default: ``100``)
-     '''
-    params = (
-        ('percents', 100),
-    )
+    params = (("percents", 100),)
 
 
 class PercentSizerInt(PercentSizer):
-    '''This sizer return percents of available cash in form of size truncated
-    to an int
+    """This sizer return percents of available cash in form of size truncated
+          to an int
+          Этот сайзер возвращает процент от доступных денежных средств в виде размера,
+      округленного до целого числа
+      Параметры:
+    - ``percents`` (по умолчанию: ``20``) - процент от доступных средств
 
-    Params:
-      - ``percents`` (default: ``20``)
-    '''
+          Params:
+            - ``percents`` (default: ``20``)
+    """
 
-    params = (
-        ('retint', True),  # return an int size or rather the float value
-    )
+    params = (("retint", True),)  # return an int size or rather the float value
 
 
 class AllInSizerInt(PercentSizerInt):
-    '''This sizer return all available cash of broker with the
-    size truncated to an int
+    """This sizer return all available cash of broker with the
+          size truncated to an int
+          Этот сайзер возвращает все доступные денежные средства брокера
+      с размером, округленным до целого числа
 
-     Params:
-       - ``percents`` (default: ``100``)
-     '''
-    params = (
-        ('percents', 100),
-    )
+           Params:
+             - ``percents`` (default: ``100``)
+          Параметры:
+    - ``percents`` (по умолчанию: ``100``) - процент от доступных средств
+    """
+
+    params = (("percents", 100),)
