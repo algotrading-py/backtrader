@@ -18,13 +18,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import calendar
-from collections import OrderedDict
 import datetime
 import pprint as pp
+from collections import OrderedDict
 
 import backtrader as bt
 from backtrader import TimeFrame
@@ -33,9 +32,9 @@ from backtrader.utils.py3 import MAXINT, with_metaclass
 
 class MetaAnalyzer(bt.MetaParams):
     def donew(cls, *args, **kwargs):
-        '''
+        """
         Intercept the strategy parameter
-        '''
+        """
         # Create the object and set the params in place
         _obj, args, kwargs = super(MetaAnalyzer, cls).donew(*args, **kwargs)
 
@@ -58,17 +57,17 @@ class MetaAnalyzer(bt.MetaParams):
             for l, line in enumerate(data.lines):
                 linealias = data._getlinealias(l)
                 if linealias:
-                    setattr(_obj, 'data_%s' % linealias, line)
-                setattr(_obj, 'data_%d' % l, line)
+                    setattr(_obj, "data_%s" % linealias, line)
+                setattr(_obj, "data_%d" % l, line)
 
             for d, data in enumerate(_obj.datas):
-                setattr(_obj, 'data%d' % d, data)
+                setattr(_obj, "data%d" % d, data)
 
                 for l, line in enumerate(data.lines):
                     linealias = data._getlinealias(l)
                     if linealias:
-                        setattr(_obj, 'data%d_%s' % (d, linealias), line)
-                    setattr(_obj, 'data%d_%d' % (d, l), line)
+                        setattr(_obj, "data%d_%s" % (d, linealias), line)
+                    setattr(_obj, "data%d_%d" % (d, l), line)
 
         _obj.create_analysis()
 
@@ -76,8 +75,7 @@ class MetaAnalyzer(bt.MetaParams):
         return _obj, args, kwargs
 
     def dopostinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = \
-            super(MetaAnalyzer, cls).dopostinit(_obj, *args, **kwargs)
+        _obj, args, kwargs = super(MetaAnalyzer, cls).dopostinit(_obj, *args, **kwargs)
 
         if _obj._parent is not None:
             _obj._parent._register(_obj)
@@ -87,7 +85,46 @@ class MetaAnalyzer(bt.MetaParams):
 
 
 class Analyzer(with_metaclass(MetaAnalyzer, object)):
-    '''Analyzer base class. All analyzers are subclass of this one
+    """Базовый класс анализатора. Все анализаторы являются подклассами этого класса
+    Экземпляр анализатора работает в рамках стратегии и обеспечивает анализ для этой стратегии.
+    Автоматически установленные атрибуты:
+      - ``self.strategy`` (предоставляет доступ к *стратегии* и всему,
+        что доступно из нее)
+      - ``self.datas[x]`` дает доступ к массиву источников данных, присутствующих в
+        системе, к которым также можно получить доступ через ссылку на стратегию
+      - ``self.data``, дает доступ к ``self.datas[0]``
+
+      - ``self.dataX`` -> ``self.datas[X]``
+
+      - ``self.dataX_Y`` -> ``self.datas[X].lines[Y]``
+
+      - ``self.dataX_name`` -> ``self.datas[X].name``
+
+      - ``self.data_name`` -> ``self.datas[0].name``
+
+      - ``self.data_Y`` -> ``self.datas[0].lines[Y]``
+
+    Это не объект *Lines*, но методы и операции следуют тому же
+    дизайну
+      - ``__init__`` во время создания экземпляра и начальной настройки
+      - ``start`` / ``stop`` для сигнализации о начале и конце операций
+      - семейство методов ``prenext`` / ``nextstart`` / ``next``, которые следуют
+        вызовам, сделанным для тех же методов в стратегии
+      - ``notify_trade`` / ``notify_order`` / ``notify_cashvalue`` /
+        ``notify_fund``, которые получают те же уведомления, что и эквивалентные
+        методы стратегии
+
+    Режим работы открытый, и никакой конкретный шаблон не предпочтителен. Таким образом,
+    анализ может быть сгенерирован с помощью вызовов ``next``, в конце операций
+    во время ``stop`` и даже с помощью единственного метода, такого как ``notify_trade``
+
+    Важно переопределить ``get_analysis``, чтобы вернуть объект типа *словарь*,
+    содержащий результаты анализа (фактический формат зависит от реализации)
+
+    """
+
+    # ************************************************************************
+    """Analyzer base class. All analyzers are subclass of this one
 
     An Analyzer instance operates in the frame of a strategy and provides an
     analysis for that strategy.
@@ -134,12 +171,16 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
     object containing the results of the analysis (the actual format is
     implementation dependent)
 
-    '''
+    """
     csv = True
 
     def __len__(self):
-        '''Support for invoking ``len`` on analyzers by actually returning the
-        current length of the strategy the analyzer operates on'''
+        """Поддержка вызова ``len`` для анализаторов путем фактического возврата
+        текущей длины стратегии, на которой работает анализатор
+        Комментарий объясняет, что этот метод позволяет использовать функцию len() с анализаторами, при этом возвращается длина связанной стратегии.
+        """
+        """Support for invoking ``len`` on analyzers by actually returning the
+        current length of the strategy the analyzer operates on"""
         return len(self.strategy)
 
     def _register(self, child):
@@ -199,61 +240,89 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
 
         self.stop()
 
+    #  все методы по умолчанию являются заглушками (pass), кроме prenext(), nextstart() и get_analysis(), которые имеют базовую реализацию.
     def notify_cashvalue(self, cash, value):
-        '''Receives the cash/value notification before each next cycle'''
+        """Получает уведомление о денежных средствах/стоимости перед каждым следующим циклом"""
+        """Receives the cash/value notification before each next cycle"""
         pass
 
     def notify_fund(self, cash, value, fundvalue, shares):
-        '''Receives the current cash, value, fundvalue and fund shares'''
+        """Получает текущие денежные средства, стоимость, стоимость фонда и акции фонда""" """
+        Receives the current cash, value, fundvalue and fund shares"""
         pass
 
     def notify_order(self, order):
-        '''Receives order notifications before each next cycle'''
+        """Получает уведомления о заявках перед каждым следующим циклом""" """
+        Receives order notifications before each next cycle"""
         pass
 
     def notify_trade(self, trade):
-        '''Receives trade notifications before each next cycle'''
+        """Получает уведомления о сделках перед каждым следующим циклом""" """
+        Receives trade notifications before each next cycle"""
         pass
 
     def next(self):
-        '''Invoked for each next invocation of the strategy, once the minum
-        preiod of the strategy has been reached'''
+        """Вызывается при каждом вызове next стратегии, после того как
+        достигнут минимальный период стратегии"""
+        """Invoked for each next invocation of the strategy, once the minum
+        preiod of the strategy has been reached"""
         pass
 
     def prenext(self):
-        '''Invoked for each prenext invocation of the strategy, until the minimum
+        """Вызывается при каждом вызове prenext стратегии, пока не будет
+        достигнут минимальный период стратегии
+        Поведение по умолчанию для анализатора - вызвать метод ``next``
+        """
+        """Invoked for each prenext invocation of the strategy, until the minimum
         period of the strategy has been reached
-
         The default behavior for an analyzer is to invoke ``next``
-        '''
+        """
         self.next()
 
     def nextstart(self):
-        '''Invoked exactly once for the nextstart invocation of the strategy,
+        """Вызывается ровно один раз при вызове nextstart стратегии,
+        когда минимальный период был впервые достигнут
+        """
+        """Invoked exactly once for the nextstart invocation of the strategy,
         when the minimum period has been first reached
-        '''
+        """
         self.next()
 
     def start(self):
-        '''Invoked to indicate the start of operations, giving the analyzer
-        time to setup up needed things'''
+        """Вызывается для обозначения начала операций, давая анализатору
+        время для настройки необходимых вещей"""
+        """Invoked to indicate the start of operations, giving the analyzer
+        time to setup up needed things"""
         pass
 
     def stop(self):
-        '''Invoked to indicate the end of operations, giving the analyzer
-        time to shut down needed things'''
+        """Вызывается для обозначения окончания операций, давая анализатору
+        время для завершения необходимых вещей"""
+        """Invoked to indicate the end of operations, giving the analyzer
+        time to shut down needed things"""
         pass
 
     def create_analysis(self):
-        '''Meant to be overriden by subclasses. Gives a chance to create the
+        """Предназначен для переопределения подклассами. Дает возможность создать
+        структуры, которые содержат анализ.
+        Поведение по умолчанию - создать ``OrderedDict`` с именем ``rets``
+        """
+        """Meant to be overriden by subclasses. Gives a chance to create the
         structures that hold the analysis.
-
         The default behaviour is to create a ``OrderedDict`` named ``rets``
-        '''
+        """
         self.rets = OrderedDict()
 
     def get_analysis(self):
-        '''Returns a *dict-like* object with the results of the analysis
+        """Возвращает объект типа *словарь* с результатами анализа
+        Ключи и формат результатов анализа в словаре зависят
+        от реализации.
+        Даже не обязательно, чтобы результат был объектом типа *словарь*, это просто
+        соглашение
+        Реализация по умолчанию возвращает стандартный OrderedDict ``rets``,
+        созданный методом ``create_analysis`` по умолчанию
+        """
+        """Returns a *dict-like* object with the results of the analysis
 
         The keys and format of analysis results in the dictionary is
         implementation dependent.
@@ -264,14 +333,18 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
         The default implementation returns the default OrderedDict ``rets``
         created by the default ``create_analysis`` method
 
-        '''
+        """
         return self.rets
 
     def print(self, *args, **kwargs):
-        '''Prints the results returned by ``get_analysis`` via a standard
+        """Печатает результаты, возвращаемые методом ``get_analysis``, через стандартный
+        объект ``Writerfile``, который по умолчанию выводит данные в стандартный
+        поток вывода
+        """
+        """Prints the results returned by ``get_analysis`` via a standard
         ``Writerfile`` object, which defaults to writing things to standard
         output
-        '''
+        """
         writer = bt.WriterFile(*args, **kwargs)
         writer.start()
         pdct = dict()
@@ -280,31 +353,34 @@ class Analyzer(with_metaclass(MetaAnalyzer, object)):
         writer.stop()
 
     def pprint(self, *args, **kwargs):
-        '''Prints the results returned by ``get_analysis`` using the pretty
+        """Печатает результаты, возвращаемые методом ``get_analysis``, используя модуль
+        форматированной печати Python (*pprint*)
+        """
+        """Prints the results returned by ``get_analysis`` using the pretty
         print Python module (*pprint*)
-        '''
+        """
         pp.pprint(self.get_analysis(), *args, **kwargs)
 
 
 class MetaTimeFrameAnalyzerBase(Analyzer.__class__):
     def __new__(meta, name, bases, dct):
+        # Хак для поддержки оригинального названия метода
         # Hack to support original method name
-        if '_on_dt_over' in dct:
-            dct['on_dt_over'] = dct.pop('_on_dt_over')  # rename method
+        if "_on_dt_over" in dct:
+            dct["on_dt_over"] = dct.pop("_on_dt_over")  # rename method
 
-        return super(MetaTimeFrameAnalyzerBase, meta).__new__(meta, name,
-                                                              bases, dct)
+        return super(MetaTimeFrameAnalyzerBase, meta).__new__(meta, name, bases, dct)
 
 
-class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
-                                           Analyzer)):
+class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase, Analyzer)):
     params = (
-        ('timeframe', None),
-        ('compression', None),
-        ('_doprenext', True),
+        ("timeframe", None),
+        ("compression", None),
+        ("_doprenext", True),
     )
 
     def _start(self):
+        # Переопределить для добавления специфичных атрибутов
         # Override to add specific attributes
         self.timeframe = self.p.timeframe or self.data._timeframe
         self.compression = self.p.compression or self.data._compression
@@ -347,6 +423,7 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
         if self.timeframe == TimeFrame.NoTimeFrame:
             dtcmp, dtkey = MAXINT, datetime.datetime.max
         else:
+            # Начиная с версии >= 1.9.x системная дата/время находится в стратегии
             # With >= 1.9.x the system datetime is in the strategy
             dt = self.strategy.datetime.datetime()
             dtcmp, dtkey = self._get_dt_cmpkey(dt)
@@ -387,6 +464,7 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
         return dtcmp, dtkey
 
     def _get_subday_cmpkey(self, dt):
+        # Расчет внутридневной позиции
         # Calculate intraday position
         point = dt.hour * 60 + dt.minute
 
@@ -396,16 +474,20 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
         if self.timeframe < TimeFrame.Seconds:
             point = point * 1e6 + dt.microsecond
 
-        # Apply compression to update point position (comp 5 -> 200 // 5)
+        # Применяем сжатие для обновления позиции точки (например, при сжатии 5 -> 200 // 5)
+        # # Apply compression to update point position (comp 5 -> 200 // 5)
         point = point // self.compression
 
-        # Move to next boundary
+        # Переходим к следующей границе
+        # # Move to next boundary
         point += 1
 
-        # Restore point to the timeframe units by de-applying compression
+        # Восстанавливаем точку во временные единицы путем обратного применения сжатия
+        # # Restore point to the timeframe units by de-applying compression
         point *= self.compression
 
-        # Get hours, minutes, seconds and microseconds
+        # Получаем часы, минуты, секунды и микросекунды
+        # # Get hours, minutes, seconds and microseconds
         if self.timeframe == TimeFrame.Minutes:
             ph, pm = divmod(point, 60)
             ps = 0
@@ -420,11 +502,12 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
             ps, pus = divmod(psec, 1e6)
 
         extradays = 0
-        if ph > 23:  # went over midnight:
+        if ph > 23:  # перешли за полночь: # went over midnight:
             extradays = ph // 24
             ph %= 24
 
         # moving 1 minor unit to the left to be in the boundary
+        # сдвигаем на 1 младшую единицу влево, чтобы быть на границе
         # pm -= self.timeframe == TimeFrame.Minutes
         # ps -= self.timeframe == TimeFrame.Seconds
         # pus -= self.timeframe == TimeFrame.MicroSeconds
@@ -432,13 +515,16 @@ class TimeFrameAnalyzerBase(with_metaclass(MetaTimeFrameAnalyzerBase,
         tadjust = datetime.timedelta(
             minutes=self.timeframe == TimeFrame.Minutes,
             seconds=self.timeframe == TimeFrame.Seconds,
-            microseconds=self.timeframe == TimeFrame.MicroSeconds)
+            microseconds=self.timeframe == TimeFrame.MicroSeconds,
+        )
 
         # Add extra day if present
+        # Добавляем дополнительный день, если он есть
         if extradays:
             dt += datetime.timedelta(days=extradays)
 
         # Replace intraday parts with the calculated ones and update it
+        # Заменяем внутридневные части рассчитанными значениями и обновляем их
         dtcmp = dt.replace(hour=ph, minute=pm, second=ps, microsecond=pus)
         dtcmp -= tadjust
         dtkey = dtcmp
