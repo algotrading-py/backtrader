@@ -35,17 +35,7 @@ from .lineseries import LineSeriesStub
 from .metabase import ItemCollection, findowner
 from .trade import Trade
 from .utils import AutoDictList, AutoOrderedDict, OrderedDict
-from .utils.py3 import (
-    MAXINT,
-    filter,
-    integer_types,
-    iteritems,
-    itervalues,
-    keys,
-    map,
-    string_types,
-    with_metaclass,
-)
+from .utils.py3 import MAXINT, filter, integer_types, iteritems, itervalues, keys, map, string_types, with_metaclass
 
 
 class MetaStrategy(StrategyBase.__class__):
@@ -123,19 +113,32 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
     lines = ("datetime",)
 
     def qbuffer(self, savemem=0, replaying=False):
-        """Enable the memory saving schemes. Possible values for ``savemem``:
+        """Включает режимы экономии памяти. Возможные значения для ``savemem``:
 
-          0: No savings. Each lines object keeps in memory all values
+            0: Без экономии. Каждый объект линий хранит в памяти все значения.
 
-          1: All lines objects save memory, using the strictly minimum needed
+            1: Все объекты линий экономят память, используя только минимально необходимый объем.
 
-        Negative values are meant to be used when plotting is required:
+            Отрицательные значения предназначены для использования при построении графиков:
 
-          -1: Indicators at Strategy Level and Observers do not enable memory
-              savings (but anything declared below it does)
+            -1: Индикаторы на уровне стратегии и наблюдатели (Observers) не включают
+                экономию памяти (но все, что объявлено ниже, использует экономию).
 
-          -2: Same as -1 plus activation of memory saving for any indicators
-              which has declared *plotinfo.plot* as False (will not be plotted)
+            -2: То же, что и -1, но дополнительно включает экономию памяти для всех индикаторов,
+                у которых *plotinfo.plot* установлено в False (не будут отображаться на графике).
+        Enable the memory saving schemes. Possible values for ``savemem``:
+
+              0: No savings. Each lines object keeps in memory all values
+
+              1: All lines objects save memory, using the strictly minimum needed
+
+            Negative values are meant to be used when plotting is required:
+
+              -1: Indicators at Strategy Level and Observers do not enable memory
+                  savings (but anything declared below it does)
+
+              -2: Same as -1 plus activation of memory saving for any indicators
+                  which has declared *plotinfo.plot* as False (will not be plotted)
         """
         if savemem < 0:
             # Get any attribute which labels itself as Indicator
@@ -220,6 +223,9 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def _addwriter(self, writer):
         """
+        В отличие от других функций _addxxx, эта принимает экземпляр,
+        поскольку writer работает на уровне cerebro и передается в стратегию
+        только для упрощения логики.
         Unlike the other _addxxx functions this one receives an instance
         because the writer works at cerebro level and is only passed to the
         strategy to simplify the logic
@@ -230,7 +236,14 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         indcls(*indargs, **indkwargs)
 
     def _addanalyzer_slave(self, ancls, *anargs, **ankwargs):
-        """Like _addanalyzer but meant for observers (or other entities) which
+        """Аналогично _addanalyzer, но предназначено для наблюдателей (Observers)
+        или других сущностей, которые зависят от выходных данных анализатора.
+        Эти анализаторы не добавляются пользователем и хранятся отдельно от
+        основных анализаторов.
+
+        Возвращает:
+        - Созданный анализатор.
+        Like _addanalyzer but meant for observers (or other entities) which
         rely on the output of an analyzer for the data. These analyzers have
         not been added by the user and are kept separate from the main
         analyzers
@@ -520,9 +533,7 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
         datatrades = self._trades[tradedata][order.tradeid]
         if not datatrades:
-            trade = Trade(
-                data=tradedata, tradeid=order.tradeid, historyon=self._tradehistoryon
-            )
+            trade = Trade(data=tradedata, tradeid=order.tradeid, historyon=self._tradehistoryon)
             datatrades.append(trade)
         else:
             trade = datatrades[-1]
@@ -635,6 +646,71 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         **kwargs
     ):
         """
+        **Примечание**: может быть вызван во время ``__init__`` или ``start``.
+
+        Запускает таймер для вызова указанного колбэка или метода ``notify_timer``
+        одной или нескольких стратегий.
+
+        Аргументы:
+
+        - ``when``: может быть:
+        - Экземпляр ``datetime.time`` (см. ниже ``tzdata``)
+        - ``bt.timer.SESSION_START`` — ссылается на начало торговой сессии
+        - ``bt.timer.SESSION_END`` — ссылается на конец торговой сессии
+
+        - ``offset`` (обязателен) — экземпляр ``datetime.timedelta``:
+        - Используется для смещения времени ``when``. Полезен, например,
+            в комбинации с ``SESSION_START`` и ``SESSION_END``, чтобы вызвать
+            таймер через определенный промежуток времени, например,
+            «15 минут после начала сессии».
+
+        - ``repeat`` — экземпляр ``datetime.timedelta``:
+        - Если указано, после первого вызова последующие вызовы
+            будут запланированы в пределах той же сессии через заданный интервал.
+        - После окончания сессии таймер сбрасывается к начальному ``when``.
+
+        - ``weekdays`` — **отсортированный** список целых чисел:
+        - Определяет, в какие дни недели (ISO-коды: понедельник — 1, воскресенье — 7)
+            таймер может быть активирован.
+        - Если не указано, таймер работает во все дни недели.
+
+        - ``weekcarry`` (по умолчанию: ``False``):
+        - Если ``True`` и таймер не сработал (например, из-за выходного),
+            он будет перенесен на следующий доступный день (даже если это новая неделя).
+
+        - ``monthdays`` — **отсортированный** список целых чисел:
+        - Определяет, в какие дни месяца должен срабатывать таймер (например, всегда 15-го числа).
+        - Если не указано, таймер работает во все дни месяца.
+
+        - ``monthcarry`` (по умолчанию: ``True``):
+        - Если указанный день отсутствует (например, выходной или праздник),
+            таймер будет перенесен на следующий доступный день.
+
+        - ``allow`` (по умолчанию: ``None``) — колбэк-функция:
+        - Принимает экземпляр ``datetime.date`` и возвращает ``True``, если дата
+            разрешена для работы таймеров, иначе ``False``.
+
+        - ``tzdata`` (по умолчанию: ``None``) — определяет интерпретацию ``when``:
+        - ``None`` — интерпретируется напрямую (фактически, как UTC, даже если это не так).
+        - Экземпляр ``pytz`` — ``when`` трактуется как локальное время, заданное этим объектом.
+        - Экземпляр источника данных (data feed) — ``when`` интерпретируется в локальном
+            времени, заданном параметром ``tz`` в источнике данных.
+
+        **Примечание**: если ``when`` — это ``SESSION_START`` или ``SESSION_END``, а ``tzdata``
+        не задан, то будет использован первый источник данных в системе (``self.data0``)
+        для определения времени сессии.
+
+        - ``cheat`` (по умолчанию: ``False``):
+        - Если ``True``, таймер вызывается до того, как брокер обработает ордера.
+            Это позволяет, например, размещать заявки по цене открытия,
+            непосредственно перед началом сессии.
+
+        - ``*args``: дополнительные аргументы передаются в ``notify_timer``.
+
+        - ``**kwargs``: дополнительные параметры передаются в ``notify_timer``.
+
+        **Возвращает**:
+        - Созданный таймер.
         **Note**: can be called during ``__init__`` or ``start``
 
         Schedules a timer to invoke either a specified callback or the
@@ -737,7 +813,16 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         )
 
     def notify_timer(self, timer, when, *args, **kwargs):
-        """Receives a timer notification where ``timer`` is the timer which was
+        """Получает уведомление от таймера, где:
+
+        - ``timer`` — таймер, возвращенный функцией ``add_timer``.
+        - ``when`` — время, когда таймер был вызван.
+        - ``args`` и ``kwargs`` — дополнительные аргументы, переданные в ``add_timer``.
+
+        Фактическое время ``when`` может быть позже ожидаемого, если система не смогла
+        вызвать таймер вовремя. Это значение представляет собой время срабатывания таймера,
+        а не текущее системное время.
+        Receives a timer notification where ``timer`` is the timer which was
         returned by ``add_timer``, and ``when`` is the calling time. ``args``
         and ``kwargs`` are any additional arguments passed to ``add_timer``
 
@@ -749,50 +834,60 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def notify_cashvalue(self, cash, value):
         """
+        Получает текущее значение средств и статус стоимости активов у брокера стратегии.
         Receives the current fund value, value status of the strategy's broker
         """
         pass
 
     def notify_fund(self, cash, value, fundvalue, shares):
         """
+        Получает текущие значения денежных средств, стоимости активов,
+        стоимости фонда и количества паев фонда.
         Receives the current cash, value, fundvalue and fund shares
         """
         pass
 
     def notify_order(self, order):
         """
+        Получает ордер при любом изменении его состояния.
         Receives an order whenever there has been a change in one
         """
         pass
 
     def notify_trade(self, trade):
         """
+        Получает сделку при любом изменении её состояния.
         Receives a trade whenever there has been a change in one
         """
         pass
 
     def notify_store(self, msg, *args, **kwargs):
-        """Receives a notification from a store provider"""
+        """Получает уведомление от провайдера хранилища.
+        Receives a notification from a store provider"""
         pass
 
     def notify_data(self, data, status, *args, **kwargs):
-        """Receives a notification from data"""
+        """Получает уведомление от источника данных.
+        Receives a notification from data"""
         pass
 
     def getdatanames(self):
         """
+        Возвращает список существующих имен данных.
         Returns a list of the existing data names
         """
         return keys(self.env.datasbyname)
 
     def getdatabyname(self, name):
         """
+        Возвращает указанный источник данных по имени, используя окружение (cerebro).
         Returns a given data by name using the environment (cerebro)
         """
         return self.env.datasbyname[name]
 
     def cancel(self, order):
-        """Cancels the order in the broker"""
+        """Отменяет ордер у брокера.
+        Cancels the order in the broker"""
         self.broker.cancel(order)
 
     def buy(
@@ -811,7 +906,73 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         transmit=True,
         **kwargs
     ):
-        """Create a buy (long) order and send it to the broker
+        """Создает заявку на покупку (длинную позицию) и отправляет ее брокеру.
+
+        Параметры:
+        - data (по умолчанию: None):
+            Указывает, для каких данных создается заявка.
+            Если None, используется self.datas[0] (он же self.data0 или self.data).
+
+        - size (по умолчанию: None):
+            Количество единиц инструмента в заявке (должно быть положительным).
+            Если None, размер позиции определяется через getsizer.
+
+        - price (по умолчанию: None):
+            Цена заявки (может иметь ограничения у брокера).
+            None допустимо для заявок Market и Close (рынок определяет цену).
+            Для Limit, Stop и StopLimit определяет триггерную цену.
+
+        - plimit (по умолчанию: None):
+            Применимо только для StopLimit. Определяет цену для исполнения лимитного ордера после срабатывания стопа.
+
+        - trailamount (по умолчанию: None):
+            Для StopTrail и StopTrailLimit: абсолютное расстояние до цены для трейлинг-стопа.
+
+        - trailpercent (по умолчанию: None):
+            Для StopTrail и StopTrailLimit: процентное расстояние до цены для трейлинг-стопа.
+            Если указано trailamount, используется оно.
+
+        - exectype (по умолчанию: None):
+            Тип заявки:
+            - Order.Market (или None) — исполняется по следующей доступной цене.
+            - Order.Limit — исполняется по указанной price или лучше.
+            - Order.Stop — срабатывает при price и исполняется как Market.
+            - Order.StopLimit — срабатывает при price, исполняется как Limit с plimit.
+            - Order.Close — исполняется только по цене закрытия сессии.
+            - Order.StopTrail — срабатывает при price минус trailamount (или trailpercent), обновляется при движении цены.
+            - Order.StopTrailLimit — аналогично StopTrail, но с лимитным ордером.
+
+        - valid (по умолчанию: None):
+            Срок действия заявки:
+            - None — заявка не истекает (*Good till Cancel*), остается в рынке, пока не исполнится или не будет отменена.
+            - datetime.datetime или datetime.date — заявка действует до указанной даты (*Good till Date*).
+            - Order.DAY, 0 или timedelta() — действует до конца торговой сессии (*Day Order*).
+            - Число — интерпретируется как datetime в формате matplotlib (используемом backtrader).
+
+        - tradeid (по умолчанию: 0):
+            Внутренний идентификатор для отслеживания пересекающихся сделок по одному инструменту.
+
+        - oco (по умолчанию: None):
+            Другая заявка, с которой создается группа OCO (Order Cancel Others).
+            Если одна из заявок исполняется, остальные автоматически отменяются.
+
+        - parent (по умолчанию: None):
+            Определяет родительскую заявку в группе связанных ордеров (*Bracket Orders*).
+            Например, покупка с лимитным ордером на продажу и стоп-ордером.
+            Дочерние ордера активируются только после исполнения родительского.
+
+        - transmit (по умолчанию: True):
+            Определяет, должна ли заявка быть немедленно отправлена брокеру.
+            Полезно для управления *Bracket Orders*, когда родительская заявка отправляется без детей.
+
+        - **kwargs: Дополнительные параметры, специфичные для брокера.
+            Например, для Interactive Brokers можно передать:
+            orderType='LIT', lmtPrice=10.0, auxPrice=9.8
+
+        Возвращает:
+        - Объект созданной заявки.
+
+        Create a buy (long) order and send it to the broker
 
           - ``data`` (default: ``None``)
 
@@ -1000,6 +1161,12 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         **kwargs
     ):
         """
+        Создает заявку на продажу (короткую позицию) и отправляет ее брокеру.
+
+        См. документацию для метода ``buy`` для пояснения параметров.
+
+        Возвращает:
+        - Объект созданной заявки
         To create a selll (short) order and send it to the broker
 
         See the documentation for ``buy`` for an explanation of the parameters
@@ -1034,6 +1201,16 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def close(self, data=None, size=None, **kwargs):
         """
+        Закрывает длинную или короткую позицию.
+
+        См. документацию для метода ``buy`` для пояснения параметров.
+
+        Примечание:
+        - ``size``: автоматически рассчитывается на основе текущей позиции,
+        если не указано явно (по умолчанию: ``None``).
+
+        Возвращает:
+        - Объект созданной заявки.
         Counters a long/short position closing it
 
         See the documentation for ``buy`` for an explanation of the parameters
@@ -1081,6 +1258,84 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         **kwargs
     ):
         """
+        Создает группу bracket-ордеров (нижний уровень - ордер на покупку - верхний уровень).
+        Стандартное поведение следующее:
+
+        - Размещение **buy**-ордера с исполнением ``Limit``.
+        - Размещение *нижнего* bracket-ордера на продажу с исполнением ``Stop``.
+        - Размещение *верхнего* bracket-ордера на продажу с исполнением ``Limit``.
+
+        ### Аргументы:
+
+        - ``data`` (по умолчанию: ``None``)
+        - Указывает, для каких данных создается заявка.
+        - Если ``None``, используется первый источник данных (``self.datas[0] or self.data0``).
+
+        - ``size`` (по умолчанию: ``None``)
+        - Размер позиции (должен быть положительным).
+        - Если ``None``, размер определяется через ``getsizer``.
+        - **Важно**: Один и тот же размер применяется ко всем 3 ордерам в bracket-группе.
+
+        - ``price`` (по умолчанию: ``None``)
+        - Цена исполнения ордера.
+        - ``None`` допустимо для ``Market`` и ``Close`` (цена определяется рынком).
+        - Для ``Limit``, ``Stop`` и ``StopLimit`` указывает триггерную цену.
+
+        - ``plimit`` (по умолчанию: ``None``)
+        - Применимо только для ``StopLimit``.
+        - Указывает цену для исполнения *Limit*-ордера после срабатывания *Stop*.
+
+        - ``trailamount`` (по умолчанию: ``None``)
+        - Для ``StopTrail`` или ``StopTrailLimit``: абсолютное расстояние от цены, на котором удерживается трейлинг-стоп.
+
+        - ``trailpercent`` (по умолчанию: ``None``)
+        - Для ``StopTrail`` или ``StopTrailLimit``: процентное расстояние от цены, на котором удерживается трейлинг-стоп.
+        - Если также указан ``trailamount``, используется оно.
+
+        - ``exectype`` (по умолчанию: ``bt.Order.Limit``)
+        - Тип исполнения ордера (см. документацию к ``buy``).
+
+        - ``valid`` (по умолчанию: ``None``)
+        - Срок действия ордера (см. документацию к ``buy``).
+
+        - ``tradeid`` (по умолчанию: ``0``)
+        - Идентификатор сделки (см. документацию к ``buy``).
+
+        - ``oargs`` (по умолчанию: ``{}``)
+        - Словарь с дополнительными аргументами, передаваемыми в основной ордер.
+
+        - ``**kwargs``
+        - Дополнительные параметры, специфичные для брокера.
+        - Применяются ко всем 3 ордерам bracket-группы.
+
+        ### Специфические параметры для *low* и *high* ордеров:
+
+        - ``stopprice`` (по умолчанию: ``None``)
+        - Цена исполнения *нижнего* (stop) ордера.
+
+        - ``stopexec`` (по умолчанию: ``bt.Order.Stop``)
+        - Тип исполнения *нижнего* ордера.
+
+        - ``stopargs`` (по умолчанию: ``{}``)
+        - Словарь с дополнительными аргументами для *нижнего* ордера.
+
+        - ``limitprice`` (по умолчанию: ``None``)
+        - Цена исполнения *верхнего* (limit) ордера.
+
+        - ``limitexec`` (по умолчанию: ``bt.Order.Limit``)
+        - Тип исполнения *верхнего* ордера.
+
+        - ``limitargs`` (по умолчанию: ``{}``)
+        - Словарь с дополнительными аргументами для *верхнего* ордера.
+
+        ### Отключение верхнего/нижнего ордера:
+        - ``limitexec=None`` отключает *верхний* (high side) ордер.
+        - ``stopexec=None`` отключает *нижний* (low side) ордер.
+
+        ### Возвращает:
+        - Список из 3 ордеров: [основной ордер, нижний ордер, верхний ордер].
+        - Если верхний/нижний ордер отключен, возвращаемый список все равно содержит 3 элемента, но отключенные ордера будут ``None``.
+        ////////////////////////////////////////////////////////////////////////
         Create a bracket order group (low side - buy order - high side). The
         default behavior is as follows:
 
@@ -1286,6 +1541,23 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         **kwargs
     ):
         """
+        Создает группу bracket-ордеров (верхний уровень - ордер на продажу - нижний уровень).
+        Стандартное поведение следующее:
+
+        - Размещение **sell**-ордера с исполнением ``Limit``.
+        - Размещение *верхнего* bracket-ордера на покупку с исполнением ``Stop``.
+        - Размещение *нижнего* bracket-ордера на покупку с исполнением ``Limit``.
+
+        См. ``bracket_buy`` для пояснения параметров.
+
+        ### Отключение верхнего/нижнего ордера:
+        - ``stopexec=None`` отключает *верхний* (high side) ордер.
+        - ``limitexec=None`` отключает *нижний* (low side) ордер.
+
+        ### Возвращает:
+        - Список из 3 ордеров: [основной ордер, верхний ордер, нижний ордер].
+        - Если верхний/нижний ордер отключен, возвращаемый список все равно содержит 3 элемента, но отключенные ордера будут ``None``.
+
         Create a bracket order group (low side - buy order - high side). The
         default behavior is as follows:
 
@@ -1368,6 +1640,17 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def order_target_size(self, data=None, target=0, **kwargs):
         """
+        Размещает ордер для ребалансировки позиции до целевого размера ``target``.
+
+        Текущий размер позиции ``position`` учитывается как начальная точка для достижения ``target``:
+
+        - Если ``target`` > ``pos.size`` → выполняется покупка на ``target - pos.size``.
+        - Если ``target`` < ``pos.size`` → выполняется продажа на ``pos.size - target``.
+
+        ### Возвращает:
+        - Созданный ордер.
+        - Или ``None``, если ордер не требуется (``target == position.size``).
+
         Place an order to rebalance a position to have final size of ``target``
 
         The current ``position`` size is taken into account as the start point
@@ -1404,6 +1687,18 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def order_target_value(self, data=None, target=0.0, price=None, **kwargs):
         """
+        Размещает ордер для ребалансировки позиции до целевой стоимости ``target``.
+
+        Текущая стоимость ``value`` учитывается как начальная точка для достижения ``target``:
+
+        - Если ``target`` не указан → позиция по данному инструменту закрывается.
+        - Если ``target`` > ``value`` → выполняется покупка.
+        - Если ``target`` < ``value`` → выполняется продажа.
+
+        ### Возвращает:
+        - Созданный ордер.
+        - Или ``None``, если ордер не требуется.
+
         Place an order to rebalance a position to have final value of
         ``target``
 
@@ -1451,6 +1746,33 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def order_target_percent(self, data=None, target=0.0, **kwargs):
         """
+        Размещает ордер для ребалансировки позиции до целевого значения ``target``
+        в процентах от текущей стоимости портфеля ``value``.
+
+        - ``target`` задается в десятичном формате: ``0.05`` → ``5%``.
+        - Для выполнения ордера используется ``order_target_value``.
+
+        ### Пример:
+        - ``target=0.05``, стоимость портфеля ``100``.
+        - Требуемая стоимость позиции: ``0.05 * 100 = 5``.
+        - Значение ``5`` передается в ``order_target_value``.
+
+        Текущая стоимость ``value`` учитывается как начальная точка для достижения ``target``.
+
+        Для определения направления позиции (лонг/шорт) используется ``position.size``:
+
+        - Если ``target`` > ``value``:
+        - Покупка, если ``pos.size >= 0`` (увеличение длинной позиции).
+        - Продажа, если ``pos.size < 0`` (увеличение короткой позиции).
+
+        - Если ``target`` < ``value``:
+        - Продажа, если ``pos.size >= 0`` (уменьшение длинной позиции).
+        - Покупка, если ``pos.size < 0`` (уменьшение короткой позиции).
+
+        ### Возвращает:
+        - Созданный ордер.
+        - Или ``None``, если ордер не требуется (``target == position.size``).
+
         Place an order to rebalance a position to have final value of
         ``target`` percentage of current portfolio ``value``
 
@@ -1499,6 +1821,13 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
 
     def getposition(self, data=None, broker=None):
         """
+        Возвращает текущую позицию для указанного инструмента у заданного брокера.
+
+        - Если оба параметра ``data`` и ``broker`` равны ``None``,
+        используется основной инструмент и брокер по умолчанию.
+
+        Также доступно свойство ``position``.
+
         Returns the current position for a given data in a given broker.
 
         If both are None, the main data and the default broker will be used
@@ -1630,9 +1959,7 @@ class MetaSigStrategy(Strategy.__class__):
         return cls
 
     def dopreinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = super(MetaSigStrategy, cls).dopreinit(
-            _obj, *args, **kwargs
-        )
+        _obj, args, kwargs = super(MetaSigStrategy, cls).dopreinit(_obj, *args, **kwargs)
 
         _obj._signals = collections.defaultdict(list)
 
@@ -1651,9 +1978,7 @@ class MetaSigStrategy(Strategy.__class__):
         return _obj, args, kwargs
 
     def dopostinit(cls, _obj, *args, **kwargs):
-        _obj, args, kwargs = super(MetaSigStrategy, cls).dopostinit(
-            _obj, *args, **kwargs
-        )
+        _obj, args, kwargs = super(MetaSigStrategy, cls).dopostinit(_obj, *args, **kwargs)
 
         for sigtype, sigcls, sigargs, sigkwargs in _obj.p.signals:
             _obj._signals[sigtype].append(sigcls(*sigargs, **sigkwargs))
@@ -1813,9 +2138,7 @@ class SignalStrategy(with_metaclass(MetaSigStrategy, Strategy)):
     )
 
     def _start(self):
-        self._sentinel = (
-            None  # sentinel for order concurrency # Сторож для параллельности ордеров
-        )
+        self._sentinel = None  # sentinel for order concurrency # Сторож для параллельности ордеров
         super(SignalStrategy, self)._start()
 
     def signal_add(self, sigtype, signal):
