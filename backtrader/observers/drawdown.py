@@ -18,45 +18,64 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import backtrader as bt
+
 from .. import Observer
 
 
 class DrawDown(Observer):
-    '''This observer keeps track of the current drawdown level (plotted) and
-    the maxdrawdown (not plotted) levels
+    """Этот наблюдатель (Observer) отслеживает текущий уровень просадки (*drawdown*)
+    (отображается на графике) и максимальный уровень просадки (*maxdrawdown*)
+    (не отображается).
 
-    Params:
+    ### Параметры:
 
-      - ``fund`` (default: ``None``)
+    - ``fund`` (по умолчанию: ``None``)
+      - Если ``None``, режим работы брокера (``fundmode`` - True/False)
+        будет автоматически определен для расчета на основе общей
+        чистой стоимости активов или стоимости фонда.
+        См. документацию ``set_fundmode`` в брокере.
 
-        If ``None`` the actual mode of the broker (fundmode - True/False) will
-        be autodetected to decide if the returns are based on the total net
-        asset value or on the fund value. See ``set_fundmode`` in the broker
-        documentation
+      - Можно задать ``True`` или ``False`` для явного указания режима.
 
-        Set it to ``True`` or ``False`` for a specific behavior
+      This observer keeps track of the current drawdown level (plotted) and
+        the maxdrawdown (not plotted) levels
 
-    '''
+        Params:
+
+          - ``fund`` (default: ``None``)
+
+            If ``None`` the actual mode of the broker (fundmode - True/False) will
+            be autodetected to decide if the returns are based on the total net
+            asset value or on the fund value. See ``set_fundmode`` in the broker
+            documentation
+
+            Set it to ``True`` or ``False`` for a specific behavior
+
+    """
+
     _stclock = True
 
-    params = (
-        ('fund', None),
-    )
+    params = (("fund", None),)
 
-    lines = ('drawdown', 'maxdrawdown',)
+    lines = (
+        "drawdown",
+        "maxdrawdown",
+    )
 
     plotinfo = dict(plot=True, subplot=True)
 
-    plotlines = dict(maxdrawdown=dict(_plotskip=True,))
+    plotlines = dict(
+        maxdrawdown=dict(
+            _plotskip=True,
+        )
+    )
 
     def __init__(self):
         kwargs = self.p._getkwargs()
-        self._dd = self._owner._addanalyzer_slave(bt.analyzers.DrawDown,
-                                                  **kwargs)
+        self._dd = self._owner._addanalyzer_slave(bt.analyzers.DrawDown, **kwargs)
 
     def next(self):
         self.lines.drawdown[0] = self._dd.rets.drawdown  # update drawdown
@@ -64,18 +83,26 @@ class DrawDown(Observer):
 
 
 class DrawDownLength(Observer):
-    '''This observer keeps track of the current drawdown length (plotted) and
+    """This observer keeps track of the current drawdown length (plotted) and
     the drawdown max length (not plotted)
 
     Params: None
-    '''
+    """
+
     _stclock = True
 
-    lines = ('len', 'maxlen',)
+    lines = (
+        "len",
+        "maxlen",
+    )
 
     plotinfo = dict(plot=True, subplot=True)
 
-    plotlines = dict(maxlength=dict(_plotskip=True,))
+    plotlines = dict(
+        maxlength=dict(
+            _plotskip=True,
+        )
+    )
 
     def __init__(self):
         self._dd = self._owner._addanalyzer_slave(bt.analyzers.DrawDown)
@@ -86,24 +113,32 @@ class DrawDownLength(Observer):
 
 
 class DrawDown_Old(Observer):
-    '''This observer keeps track of the current drawdown level (plotted) and
+    """This observer keeps track of the current drawdown level (plotted) and
     the maxdrawdown (not plotted) levels
 
     Params: None
-    '''
+    """
+
     _stclock = True
 
-    lines = ('drawdown', 'maxdrawdown',)
+    lines = (
+        "drawdown",
+        "maxdrawdown",
+    )
 
     plotinfo = dict(plot=True, subplot=True)
 
-    plotlines = dict(maxdrawdown=dict(_plotskip='True',))
+    plotlines = dict(
+        maxdrawdown=dict(
+            _plotskip="True",
+        )
+    )
 
     def __init__(self):
         super(DrawDown_Old, self).__init__()
 
         self.maxdd = 0.0
-        self.peak = float('-inf')
+        self.peak = float("-inf")
 
     def next(self):
         value = self._owner.broker.getvalue()
