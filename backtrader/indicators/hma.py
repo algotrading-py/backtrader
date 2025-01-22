@@ -18,42 +18,62 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-from . import MovingAverageBase, MovAv
+from . import MovAv, MovingAverageBase
 
 
 # Inherits from MovingAverageBase to auto-register as MovingAverage type
 class HullMovingAverage(MovingAverageBase):
-    '''By Alan Hull
+    """Автор: Алан Халл
 
+    Скользящее среднее Халла (HMA) решает давнюю проблему создания скользящего
+    среднего, которое будет более чувствительно к текущей динамике цен,
+    сохраняя при этом сглаженность кривой. Фактически, HMA практически
+    устраняет запаздывание и одновременно улучшает сглаживание.
+
+    Формула:
+      - hma = wma(2 * wma(data, period // 2) - wma(data, period), sqrt(period))
+
+    См. также:
+      - http://alanhull.com/hull-moving-average
+
+    Примечание:
+
+      - Обратите внимание, что окончательный минимальный период не равен
+        значению, переданному в параметре ``period``.
+        В финальном этапе выполняется усреднение уже усреднённых значений,
+        при этом используется период, равный *квадратному корню*
+        от исходного периода.
+
+        В стандартном случае при ``period = 30`` финальный минимальный период,
+        прежде чем скользящее среднее начнёт выдавать ненулевые значения, равен ``34``.
+
+    By Alan Hull
     The Hull Moving Average solves the age old dilemma of making a moving
     average more responsive to current price activity whilst maintaining curve
     smoothness. In fact the HMA almost eliminates lag altogether and manages to
     improve smoothing at the same time.
-
     Formula:
       - hma = wma(2 * wma(data, period // 2) - wma(data, period), sqrt(period))
-
     See also:
       - http://alanhull.com/hull-moving-average
-
     Note:
-
       - Please note that the final minimum period is not the period passed with
         the parameter ``period``. A final moving average on moving average is
         done in which the period is the *square root* of the original.
-
         In the default case of ``30`` the final minimum period before the
         moving average produces a non-NAN value is ``34``
-    '''
-    alias = ('HMA', 'HullMA',)
-    lines = ('hma',)
+    """
+
+    alias = (
+        "HMA",
+        "HullMA",
+    )
+    lines = ("hma",)
 
     # param 'period' is inherited from MovingAverageBase
-    params = (('_movav', MovAv.WMA),)
+    params = (("_movav", MovAv.WMA),)
 
     def __init__(self):
         wma = self.p._movav(self.data, period=self.params.period)
