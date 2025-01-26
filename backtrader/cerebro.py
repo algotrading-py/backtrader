@@ -862,6 +862,14 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def resampledata(self, dataname, name=None, **kwargs):
         """
+        Добавляет поток данных (Data Feed) для ресемплирования системой.
+
+        Если указан параметр `name`, он будет сохранен в `data._name`
+        и может использоваться для отображения или построения графиков.
+
+        Дополнительные параметры, такие как `timeframe`, `compression`, `todate`,
+        будут переданы фильтру без изменений.
+
         Adds a ``Data Feed`` to be resample by the system
 
         If ``name`` is not None it will be put into ``data._name`` which is
@@ -881,6 +889,11 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def optcallback(self, cb):
         """
+        Добавляет *callback* (обратный вызов) в список функций,
+        которые будут вызываться после выполнения каждой стратегии
+        с результатами оптимизации.
+
+        Формат вызова: cb(strategy)
         Adds a *callback* to the list of callbacks that will be called with the
         optimizations when each of the strategies has been run
 
@@ -890,6 +903,23 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def optstrategy(self, strategy, *args, **kwargs):
         """
+        Добавляет класс ``Strategy`` для оптимизации. Экземпляр стратегии будет создан во время выполнения ``run``.
+
+        Аргументы ``args`` и ``kwargs`` должны быть итерируемыми объектами, содержащими значения для перебора.
+
+        Примеры:
+        - ```cerebro.optstrategy(MyStrategy, period=(15, 25))```
+        Запустит оптимизацию с параметром ``period``, принимающим значения 15 и 25.
+
+        - ```cerebro.optstrategy(MyStrategy, period=range(15, 25))```
+        Запустит стратегию с ``period`` от 15 до 24 (25 не включено, так как диапазоны в Python полуоткрытые).
+
+        - ```cerebro.optstrategy(MyStrategy, period=(15,))```
+        Передача параметра без оптимизации — используется кортеж с одним значением.
+
+        - ```cerebro.optstrategy(MyStrategy, period=15)```
+        ``backtrader`` автоматически создаст внутренний псевдо-итерируемый объект, если передан одиночный параметр.
+
         Adds a ``Strategy`` class to the mix for optimization. Instantiation
         will happen during ``run`` time.
 
@@ -939,6 +969,13 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def addstrategy(self, strategy, *args, **kwargs):
         """
+        Добавляет класс ``Strategy`` для одиночного запуска.
+        Экземпляр стратегии будет создан во время выполнения ``run``.
+
+        Аргументы ``args`` и ``kwargs`` передаются в стратегию без изменений при её создании.
+
+        Возвращает индекс, по которому можно ссылаться на добавленные объекты (например, ``sizers``).
+
         Adds a ``Strategy`` class to the mix for a single pass run.
         Instantiation will happen during ``run`` time.
 
@@ -953,6 +990,8 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def setbroker(self, broker):
         """
+        Устанавливает конкретный экземпляр ``broker`` для данной стратегии,
+        заменяя брокера, унаследованного от ``cerebro`
         Sets a specific ``broker`` instance for this strategy, replacing the
         one inherited from cerebro.
         """
@@ -962,6 +1001,9 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def getbroker(self):
         """
+        Возвращает экземпляр брокера.
+
+        Также доступно как ``property`` с именем ``broker
         Returns the broker instance.
 
         This is also available as a ``property`` by the name ``broker``
@@ -972,35 +1014,49 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def plot(self, plotter=None, numfigs=1, iplot=True, start=None, end=None, width=16, height=9, dpi=300, tight=True, use=None, **kwargs):
         """
-        Plots the strategies inside cerebro
+        Строит графики стратегий внутри ``cerebro``.
 
-        If ``plotter`` is None a default ``Plot`` instance is created and
-        ``kwargs`` are passed to it during instantiation.
+        Параметры:
+        - ``plotter`` — если не задан, создается стандартный экземпляр ``Plot``, которому передаются ``kwargs``.
+        - ``numfigs`` — количество графиков, на которые будет разделено изображение (для уменьшения плотности данных).
+        - ``iplot`` — если ``True`` и выполняется в ``notebook``, графики отображаются внутри ноутбука.
+        - ``use`` — имя желаемого backend'а ``matplotlib`` (имеет приоритет над ``iplot``).
+        - ``start`` — индекс массива дат стратегии или объект ``datetime.date``, ``datetime.datetime``, указывающий начало графика.
+        - ``end`` — индекс массива дат стратегии или объект ``datetime.date``, ``datetime.datetime``, указывающий конец графика.
+        - ``width`` — ширина сохраненного изображения (в дюймах).
+        - ``height`` — высота сохраненного изображения (в дюймах).
+        - ``dpi`` — качество сохраненного изображения (в точках на дюйм).
+        - ``tight`` — если ``True``, сохраняет только содержимое графика без рамки.
 
-        ``numfigs`` split the plot in the indicated number of charts reducing
-        chart density if wished
+                Plots the strategies inside cerebro
 
-        ``iplot``: if ``True`` and running in a ``notebook`` the charts will be
-        displayed inline
+                If ``plotter`` is None a default ``Plot`` instance is created and
+                ``kwargs`` are passed to it during instantiation.
 
-        ``use``: set it to the name of the desired matplotlib backend. It will
-        take precedence over ``iplot``
+                ``numfigs`` split the plot in the indicated number of charts reducing
+                chart density if wished
 
-        ``start``: An index to the datetime line array of the strategy or a
-        ``datetime.date``, ``datetime.datetime`` instance indicating the start
-        of the plot
+                ``iplot``: if ``True`` and running in a ``notebook`` the charts will be
+                displayed inline
 
-        ``end``: An index to the datetime line array of the strategy or a
-        ``datetime.date``, ``datetime.datetime`` instance indicating the end
-        of the plot
+                ``use``: set it to the name of the desired matplotlib backend. It will
+                take precedence over ``iplot``
 
-        ``width``: in inches of the saved figure
+                ``start``: An index to the datetime line array of the strategy or a
+                ``datetime.date``, ``datetime.datetime`` instance indicating the start
+                of the plot
 
-        ``height``: in inches of the saved figure
+                ``end``: An index to the datetime line array of the strategy or a
+                ``datetime.date``, ``datetime.datetime`` instance indicating the end
+                of the plot
 
-        ``dpi``: quality in dots per inches of the saved figure
+                ``width``: in inches of the saved figure
 
-        ``tight``: only save actual content and not the frame of the figure
+                ``height``: in inches of the saved figure
+
+                ``dpi``: quality in dots per inches of the saved figure
+
+                ``tight``: only save actual content and not the frame of the figure
         """
         if self._exactbars > 0:
             return
