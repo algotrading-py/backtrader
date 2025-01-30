@@ -345,9 +345,7 @@ class OrderBase(with_metaclass(MetaParams, object)):
     # Volume Restrictions for orders
     V_None = range(1)
 
-    (Market, Close, Limit, Stop, StopLimit, StopTrail, StopTrailLimit, Historical) = (
-        range(8)
-    )
+    (Market, Close, Limit, Stop, StopLimit, StopTrail, StopTrailLimit, Historical) = range(8)
     ExecTypes = [
         "Market",
         "Close",
@@ -483,9 +481,7 @@ class OrderBase(with_metaclass(MetaParams, object)):
             # offset with regards to now ... get utcnow + offset
             # when reading with date2num ... it will be automatically localized
             if self.valid == self.DAY:
-                valid = datetime.datetime.combine(
-                    self.data.datetime.date(), datetime.time(23, 59, 59, 9999)
-                )
+                valid = datetime.datetime.combine(self.data.datetime.date(), datetime.time(23, 59, 59, 9999))
             else:
                 valid = self.data.datetime.datetime() + self.valid
 
@@ -493,9 +489,7 @@ class OrderBase(with_metaclass(MetaParams, object)):
 
         elif self.valid is not None:
             if not self.valid:  # avoid comparing None and 0
-                valid = datetime.datetime.combine(
-                    self.data.datetime.date(), datetime.time(23, 59, 59, 9999)
-                )
+                valid = datetime.datetime.combine(self.data.datetime.date(), datetime.time(23, 59, 59, 9999))
             else:  # assume float
                 valid = self.data.datetime[0] + self.valid
 
@@ -689,6 +683,35 @@ class OrderBase(with_metaclass(MetaParams, object)):
 
 class Order(OrderBase):
     """
+    Класс, который содержит данные о создании/исполнении и тип ордера.
+
+    Ордер может иметь следующие статусы:
+
+      - Submitted (Отправлен): отправлен брокеру и ожидает подтверждения
+      - Accepted (Принят): принят брокером
+      - Partial (Частично исполнен): частично исполнен
+      - Completed (Исполнен): полностью исполнен
+      - Canceled/Cancelled (Отменен): отменен пользователем
+      - Expired (Истек): истек срок действия
+      - Margin (Маржа): недостаточно средств для исполнения ордера
+      - Rejected (Отклонен): отклонен брокером
+
+        Это может произойти во время подачи ордера (и, следовательно, ордер не достигнет статуса Accepted) или перед исполнением с каждым новым баром, потому что средства были использованы другими источниками (например, фьючерсные инструменты могли уменьшить средства или другие ордера могли быть исполнены)
+
+    Атрибуты-члены:
+
+      - ref: уникальный идентификатор ордера
+      - created: OrderData, содержащий данные о создании
+      - executed: OrderData, содержащий данные об исполнении
+
+      - info: пользовательская информация, переданная через метод :func:`addinfo`. Она хранится в виде OrderedDict, который был подклассирован, так что ключи также могут быть указаны с использованием нотации '.'
+
+    Методы пользователя:
+
+      - isbuy(): возвращает bool, указывающий, покупает ли ордер
+      - issell(): возвращает bool, указывающий, продает ли ордер
+      - alive(): возвращает bool, если ордер находится в статусе Partial или Accepted
+    ----------------------------------------------------------
     Class which holds creation/execution data and type of oder.
 
     The order may have the following status:

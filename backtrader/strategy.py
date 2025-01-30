@@ -578,6 +578,8 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
                     comminfo=order.comminfo,
                 )
 
+                # Эта дополнительная проверка охватывает случай, когда разные ордера с разными tradeid
+                # свели позицию к 0, и следующий ордер "открывает" позицию, но "закрывает" сделку
                 # This extra check covers the case in which different tradeid
                 # orders have put the position down to 0 and the next order
                 # "opens" a position but "closes" the trade
