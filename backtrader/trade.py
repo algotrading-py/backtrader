@@ -36,7 +36,7 @@ class TradeHistory(AutoOrderedDict):
       - ``status`` (``dict`` с нотацией через точку): Содержит результирующий статус
         события обновления и имеет следующие податрибуты
 
-        - ``status`` (``int``): Статус сделки
+        - ``status`` (``int``): Статус сделки Created == 0  Open == 1  Closed == 2
         - ``dt`` (``float``): Дата и время в формате float
         - ``barlen`` (``int``): Количество баров, в течение которых сделка была активна
         - ``size`` (``int``): Текущий размер сделки
@@ -79,7 +79,8 @@ class TradeHistory(AutoOrderedDict):
     """
 
     def __init__(self, status, dt, barlen, size, price, value, pnl, pnlcomm, tz, event=None):
-        """Initializes the object to the current status of the Trade"""
+        """Инициализирует объект до текущего состояния сделки
+        Initializes the object to the current status of the Trade"""
         super(TradeHistory, self).__init__()
         self.status.status = status
         self.status.dt = dt
@@ -111,17 +112,20 @@ class TradeHistory(AutoOrderedDict):
         )
 
     def doupdate(self, order, size, price, commission):
-        """Used to fill the ``update`` part of the history entry"""
+        """Используется для заполнения части истории с обновлением
+        Used to fill the ``update`` part of the history entry"""
         self.event.order = order
         self.event.size = size
         self.event.price = price
         self.event.commission = commission
 
-        # Do not allow updates (avoids typing errors)
+        # Не допускайте обновлений (избегает опечаток)
+        # # Do not allow updates (avoids typing errors)
         self._close()
 
     def datetime(self, tz=None, naive=True):
-        """Returns a datetime for the time the update event happened"""
+        """Возвращает дату и время, когда произошло событие
+        Returns a datetime for the time the update event happened"""
         return num2date(self.status.dt, tz or self.status.tz, naive)
 
 
@@ -139,7 +143,7 @@ class Trade(object):
     Атрибуты-члены:
 
       - ``ref``: уникальный идентификатор сделки
-      - ``status`` (``int``): один из Created, Open, Closed
+      - ``status`` (``int``): один из Created == 0  Open == 1  Closed == 2
       - ``tradeid``: идентификатор группы сделок, переданный ордерам при создании
         По умолчанию в ордерах 0
       - ``size`` (``int``): текущий размер сделки
@@ -232,7 +236,7 @@ class Trade(object):
 
     refbasis = itertools.count(1)
 
-    status_names = ["Created", "Open", "Closed"]
+    status_names = ["Created", "Open", "Closed"]  # Created == 0  Open == 1  Closed == 2
     Created, Open, Closed = range(3)
 
     def __str__(self):
@@ -290,27 +294,31 @@ class Trade(object):
         self.status = self.Created
 
     def __len__(self):
-        """Absolute size of the trade"""
+        """Абсолютный размер сделки
+        Absolute size of the trade"""
         return abs(self.size)
 
     def __bool__(self):
-        """Trade size is not 0"""
+        """Размер сделки не равен 0
+        Trade size is not 0"""
         return self.size != 0
 
     __nonzero__ = __bool__
 
     def getdataname(self):
-        """Shortcut to retrieve the name of the data this trade references"""
+        """Краткий способ получить имя данных, на которые ссылается эта сделка
+        Shortcut to retrieve the name of the data this trade references"""
         return self.data._name
 
     def open_datetime(self, tz=None, naive=True):
-        """Returns a datetime.datetime object with the datetime in which
-        the trade was opened
+        """# Возвращает объект datetime.datetime с датой и временем, когда сделка была открыта
+        Returns a datetime.datetime object with the datetime in which the trade was opened
         """
         return self.data.num2date(self.dtopen, tz=tz, naive=naive)
 
     def close_datetime(self, tz=None, naive=True):
-        """Returns a datetime.datetime object with the datetime in which
+        """Возвращает объект datetime.datetime с датой и временем, когда сделка была закрыта
+        Returns a datetime.datetime object with the datetime in which
         the trade was closed
         """
         return self.data.num2date(self.dtclose, tz=tz, naive=naive)
@@ -374,16 +382,19 @@ class Trade(object):
                          Not used because the trade has an independent pnl
         """
         if not size:
-            return  # empty update, skip all other calculations
+            return  # пустое обновление, пропустить все остальные вычисления
 
-        # Commission can only increase
+        # Комиссия может только увеличиваться
         self.commission += commission
 
         # Update size and keep a reference for logic an calculations
+        # Обновите размер и сохраните ссылку для логики и вычислений
         oldsize = self.size
         self.size += size  # size will carry the opposite sign if reducing
+        # размер будет иметь противоположный знак при уменьшении
 
         # Check if it has been currently opened
+        # Проверьте, было ли оно открыто в данный момент
         self.justopened = bool(not oldsize and size)
 
         if self.justopened:
@@ -392,15 +403,19 @@ class Trade(object):
             self.long = self.size > 0
 
         # Any size means the trade was opened
+        # Любой размер означает, что сделка была открыта
         self.isopen = bool(self.size)
 
         # Update current trade length
+        # Обновите текущую длину сделки
         self.barlen = len(self.data) - self.baropen
 
         # record if the position was closed (set to null)
+        # зафиксируйте, была ли позиция закрыта (установлена в null)
         self.isclosed = bool(oldsize and not self.size)
 
         # record last bar for the trade
+        # зафиксируйте последний бар для сделки
         if self.isclosed:
             self.isopen = False
             self.barclose = len(self.data)
@@ -413,11 +428,14 @@ class Trade(object):
         if abs(self.size) > abs(oldsize):
             # position increased (be it positive or negative)
             # update the average price
+            # позиция увеличилась (будь то положительная или отрицательная)
+            # обновите среднюю цену
             self.price = (oldsize * self.price + size * price) / self.size
             pnl = 0.0
 
         else:  # abs(self.size) < abs(oldsize)
             # position reduced/closed
+            # позиция уменьшена/закрыта
             pnl = comminfo.profitandloss(-size, self.price, price)
 
         self.pnl += pnl
@@ -426,6 +444,7 @@ class Trade(object):
         self.value = comminfo.getvaluesize(self.size, self.price)
 
         # Update the history if needed
+        # Обновите историю, если необходимо
         if self.historyon:
             dt0 = self.data.datetime[0] if not order.p.simulated else 0.0
             histentry = TradeHistory(
