@@ -719,7 +719,15 @@ class Cerebro(with_metaclass(MetaParams, object)):
         self.notify_store(msg, *args, **kwargs)
 
     def notify_store(self, msg, *args, **kwargs):
-        """Receive store notifications in cerebro
+        """Получение уведомлений от хранилища в cerebro
+
+        Этот метод может быть переопределен в подклассах ``Cerebro``
+
+        Фактические полученные ``msg``, ``*args`` и ``**kwargs`` определяются реализацией
+        (полностью зависят от *data/broker/store*), но в общем случае следует ожидать,
+        что они будут *печатаемыми*, чтобы позволить прием и эксперименты.
+
+        Receive store notifications in cerebro
 
         This method can be overridden in ``Cerebro`` subclasses
 
@@ -770,7 +778,15 @@ class Cerebro(with_metaclass(MetaParams, object)):
         self.notify_data(data, status, *args, **kwargs)
 
     def notify_data(self, data, status, *args, **kwargs):
-        """Receive data notifications in cerebro
+        """Получение уведомлений о данных в cerebro
+
+        Этот метод может быть переопределен в подклассах ``Cerebro``
+
+        Фактические полученные ``*args`` и ``**kwargs`` определяются реализацией
+        (полностью зависят от *data/broker/store*), но в общем случае следует ожидать,
+        что они будут *печатаемыми*, чтобы позволить прием и эксперименты.
+
+        Receive data notifications in cerebro
 
         This method can be overridden in ``Cerebro`` subclasses
 
@@ -783,6 +799,10 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def adddata(self, data, name=None):
         """
+        Добавляет экземпляр ``Data Feed`` в набор.
+
+        Если ``name`` не None, оно будет помещено в ``data._name``, что предназначено
+        для украшения/построения графиков.
         Adds a ``Data Feed`` instance to the mix.
 
         If ``name`` is not None it will be put into ``data._name`` which is
@@ -823,7 +843,15 @@ class Cerebro(with_metaclass(MetaParams, object)):
         return d
 
     def rolloverdata(self, *args, **kwargs):
-        """Chains several data feeds into one
+        """Объединяет несколько источников данных в один
+
+        Если ``name`` передан как именованный аргумент и не None, оно будет помещено
+        в ``data._name``, что предназначено для украшения/построения графиков.
+
+        Если ``None``, то будет использовано имя первого источника данных
+
+        Любые другие аргументы будут переданы в класс RollOver
+        Chains several data feeds into one
 
         If ``name`` is passed as named argument and is not None it will be put
         into ``data._name`` which is meant for decoration/plotting purposes.
@@ -843,6 +871,14 @@ class Cerebro(with_metaclass(MetaParams, object)):
 
     def replaydata(self, dataname, name=None, **kwargs):
         """
+        Добавляет ``Data Feed`` для воспроизведения системой
+
+        Если ``name`` не None, оно будет помещено в ``data._name``, что предназначено
+        для украшения/построения графиков.
+
+        Любые другие аргументы, такие как ``timeframe``, ``compression``, ``todate``,
+        которые поддерживаются фильтром воспроизведения, будут переданы прозрачно
+
         Adds a ``Data Feed`` to be replayed by the system
 
         If ``name`` is not None it will be put into ``data._name`` which is
